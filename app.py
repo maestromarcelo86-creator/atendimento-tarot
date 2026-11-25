@@ -266,3 +266,56 @@ if st.session_state.pagamento_confirmado or eh_tarologo:
             st.session_state.pagamento_confirmado = False
             st.success(f"✅ Horário reservado e confirmado para **{data_str} às {horario_escolhido}** com Marcelo Astrologo!")
 else:
+st.subheader("📅 2º Passo: Agendar Dia e Horário Certo")
+
+if st.session_state.pagamento_confirmado or eh_tarologo:
+    st.success(f"🔓 Pagamento confirmado ({st.session_state.minutos_pagos} min)! Escolha abaixo o dia e horário da sua consulta:")
+    col_d1, col_d2 = st.columns(2)
+    with col_d1:
+        data_escolhida = st.date_input("Escolha o dia:", min_value=date.today(), max_value=date.today() + timedelta(days=60), format="DD/MM/YYYY")
+        data_str = data_escolhida.strftime("%d/%m/%Y")
+
+    todos_horarios = ("09:00", "10:00", "11:00", "13:00", "14:00", "15:00", "16:00", "17:00", "18:00", "19:00", "20:00", "21:00")
+    ocupados_res = supabase.table("agendamentos_tarot").select("horario").eq("data_consulta", data_str).execute().data
+    horarios_ocupados = tuple(item.get("horario") for item in ocupados_res)
+    horarios_livres = tuple(h for h in todos_horarios if h not in horarios_ocupados)
+
+    with col_d2:
+        if horarios_livres:
+            horario_escolhido = st.selectbox("Horários disponíveis neste dia:", horarios_livres)
+        else:
+            horario_escolhido = None
+            st.warning("Todos os horários desta data já estão preenchidos. Escolha outro dia.")
+
+    col_n1, col_n2 = st.columns(2)
+    with col_n1:
+        nome_ag = st.text_input("Seu Nome Completo:", placeholder="Ex: Maria Silva")
+    with col_n2:
+        whats_ag = st.text_input("Seu WhatsApp (com DDD):", placeholder="Ex: (11) 99999-9999")
+
+    servico_ag = st.selectbox("Assunto da Consulta:", ("🃏 Tarot & Vidência", "🌌 Astrologia & Mapa Astral", "🕊️ Consultoria Espiritual"))
+
+    if st.button("📅 Confirmar Horário Pago"):
+        if not horarios_livres:
+            st.error("Selecione uma data com horários disponíveis.")
+        elif not nome_ag.strip() or not whats_ag.strip():
+            st.warning("Preencha seu nome e WhatsApp para confirmar o horário.")
+        else:
+            supabase.table("agendamentos_tarot").insert({
+                "data_consulta": data_str,
+                "horario": horario_escolhido,
+                "nome_cliente": nome_ag.strip(),
+                "whatsapp": whats_ag.strip(),
+                "servico": f"{servico_ag} ({st.session_state.minutos_pagos} min pagos)"
+            }).execute()
+            st.session_state.pagamento_confirmado = False
+            st.success(f"✅ Horário reservado e confirmado para **{data_str} às {horario_escolhido}** com Marcelo Astrologo!")
+else:
+    st.warning("🔒 **Agenda Bloqueada:** Para escolher e reservar um dia e horário exclusivo, realize primeiro o pagamento dos seus minutos no **1º Passo** acima.")
+
+st.divider()
+col_info1, col_info2 = st.columns(2)
+with col_info1:
+    st.markdown("**🔒 Sigilo Absoluto**\n\nTodas as consultas com Marcelo Astrologo são 100% confidenciais.")
+with col_info2:
+    st.markdown("**⏳ Tempo Transparente**\n\nO cronômetro inicia apenas após a confirmação do pagamento.")
