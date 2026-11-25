@@ -5,7 +5,6 @@ import stripe
 from supabase import create_client
 from streamlit_autorefresh import st_autorefresh
 
-# --- CONFIGURAÇÃO DA PÁGINA ---
 st.set_page_config(
     page_title="Marcelo Astrologo | Tarot, Vidência, Astrologia & Consultoria Espiritual",
     page_icon="🔮",
@@ -15,7 +14,6 @@ st.set_page_config(
 
 PRECO_MINUTO = 3.99
 
-# --- ESTILO VISUAL PERSONALIZADO (TEMA MÍSTICO DARK & DOURADO) ---
 st.markdown("""
 <style>
     .stApp {
@@ -108,7 +106,6 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# --- CONEXÃO COM SUPABASE (CONFIGURAÇÃO MANTIDA) ---
 @st.cache_resource
 def init_supabase():
     return create_client(st.secrets.get("SUPABASE_URL"), st.secrets.get("SUPABASE_KEY"))
@@ -131,7 +128,6 @@ sessao = get_sessao()
 agora = int(time.time())
 segundos_restantes = sessao.get("segundos_restantes", 0)
 
-# Cronômetro ao vivo
 if segundos_restantes > 0:
     st_autorefresh(interval=5000, key="cronometro_ao_vivo")
     decorrido = agora - sessao.get("ultimo_tick", agora)
@@ -143,7 +139,6 @@ if segundos_restantes > 0:
         }).eq("id", 1).execute()
         segundos_restantes = novo_tempo
 
-# --- PAINEL DO TARÓLOGO (BARRA LATERAL) ---
 eh_tarologo = False
 with st.sidebar:
     st.header("🔮 Painel - Marcelo Astrologo")
@@ -175,7 +170,6 @@ with st.sidebar:
             supabase.table("mensagens_tarot").delete().neq("id", 0).execute()
             st.rerun()
 
-# --- 1. CABEÇALHO DO SITE (MARCELO ASTROLOGO) ---
 badge = '<span class="status-badge-on">🟢 DISPONÍVEL PARA CONSULTA AO VIVO</span>' if sessao.get("tarologo_online", True) else '<span class="status-badge-off">🔴 EM ATENDIMENTO / OFFLINE</span>'
 
 st.markdown(f"""
@@ -190,7 +184,6 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
-# --- 2. SALA DE ATENDIMENTO AO VIVO (QUANDO HÁ SALDO DE MINUTOS) ---
 if segundos_restantes > 0:
     mins = segundos_restantes // 60
     segs = segundos_restantes % 60
@@ -219,7 +212,6 @@ if segundos_restantes > 0:
 
     st.divider()
 
-# --- 3. ESPECIALIDADES DA CONSULTORIA ---
 st.subheader("✨ Áreas de Atendimento & Consultoria")
 e1, e2, e3 = st.columns(3)
 with e1:
@@ -231,7 +223,6 @@ with e3:
 
 st.divider()
 
-# --- 4. PACOTES DE MINUTOS E PAGAMENTO ---
 st.subheader("⏱️ Escolha o Tempo da sua Consulta")
 
 c1, c2, c3 = st.columns(3)
@@ -259,7 +250,6 @@ forma_pagto = st.radio(
 )
 
 if forma_pagto == "💠 Mercado Pago (Pix na hora, Crédito ou Débito)":
- if forma_pagto == "💠 Mercado Pago (Pix na hora, Crédito ou Débito)":
     if st.button("Gerar Link de Pagamento (Pix / Cartão)"):
         sdk = mercadopago.SDK(st.secrets.get("MP_ACCESS_TOKEN"))
         item_mp = {
@@ -272,14 +262,15 @@ if forma_pagto == "💠 Mercado Pago (Pix na hora, Crédito ou Débito)":
             "items": list((item_mp,)),
             "payment_methods": {"installments": 6}
         }
-        res = sdk.preference().create(preferencia)
-        resp_mp = res.get("response", {})
-        if "init_point" in resp_mp:
-            st.session_state.mp_pref_id = resp_mp.get("id")
-            st.link_button("👉 Abrir Pagamento Seguro (Mercado Pago)", resp_mp.get("init_point"))
-            st.caption("Após concluir o pagamento, clique no botão de confirmação abaixo para liberar sua sala.")
-        else:
-            st.error("Não foi possível gerar o link. Verifique suas credenciais do Mercado Pago.")
+Use o código com cuidado.
+res = sdk.preference().create(preferencia)
+resp_mp = res.get("response", {})
+if "init_point" in resp_mp:
+st.session_state.mp_pref_id = resp_mp.get("id")
+st.link_button("👉 Abrir Pagamento Seguro (Mercado Pago)", resp_mp.get("init_point"))
+st.caption("Após concluir o pagamento, clique no botão de confirmação abaixo para liberar sua sala.")
+else:
+st.error("Não foi possível gerar o link. Verifique suas credenciais do Mercado Pago.")
 if "mp_pref_id" in st.session_state:
 if st.button("✅ Já realizei o pagamento (Liberar Sala)"):
 sdk = mercadopago.SDK(st.secrets.get("MP_ACCESS_TOKEN"))
@@ -339,16 +330,14 @@ st.warning("Pagamento ainda não confirmado pelo cartão.")
 elif forma_pagto == "🏦 Depósito / Transferência Bancária":
 st.info("""
 Dados Bancários para Depósito ou Transferência (TED/DOC):
-* Banco: Informe seu banco aqui
-* Agência: 0001 • Conta: 123456-7
+* Banco: Banco Safra (Código 422)
+* Agência: 0115
+* Conta Corrente: 342955-9
 * Favorecido: Marcelo Astrologo
 """)
 comprovante = st.file_uploader("Anexe o comprovante (foto ou PDF):", type=list(("png", "jpg", "jpeg", "pdf")))
 if comprovante:
 st.success("Comprovante enviado! Marcelo Astrologo irá validar e liberar seus minutos na sala.")
-
---- 5. RODAPÉ INFORMATIVO ---
-
 st.divider()
 col_info1, col_info2 = st.columns(2)
 with col_info1:
