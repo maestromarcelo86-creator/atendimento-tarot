@@ -24,7 +24,7 @@ def get_sessao():
             dados_iniciais = {"id": 1, "segundos_restantes": 0, "ultimo_tick": 0, "tarologo_online": True}
             supabase.table("sessao_tarot").insert(dados_iniciais).execute()
             return dados_iniciais
-        return res.data
+        return res.data[0]
     except Exception as e:
         st.error(f"Detalhe do erro no Supabase: {e}")
         st.stop()
