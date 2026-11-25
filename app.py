@@ -265,7 +265,6 @@ if st.session_state.pagamento_confirmado or eh_tarologo:
             }).execute()
             st.session_state.pagamento_confirmado = False
             st.success(f"✅ Horário reservado e confirmado para **{data_str} às {horario_escolhido}** com Marcelo Astrologo!")
-else:
 st.subheader("📅 2º Passo: Agendar Dia e Horário Certo")
 
 if st.session_state.pagamento_confirmado or eh_tarologo:
