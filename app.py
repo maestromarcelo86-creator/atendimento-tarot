@@ -18,10 +18,16 @@ supabase = init_supabase()
 
 # Busca estado atual da sala no banco de dados
 def get_sessao():
-    res = supabase.table("sessao_tarot").select("*").eq("id", 1).execute()
-    return res.data[0]
+    try:
+        res = supabase.table("sessao_tarot").select("*").eq("id", 1).execute()
+        if not res.data:
+            supabase.table("sessao_tarot").insert({"id": 1, "segundos_restantes": 0, "ultimo_tick": 0, "tarologo_online": True}).execute()
+            return {"id": 1, "segundos_restantes": 0, "ultimo_tick": 0, "tarologo_online": True}
+        return res.data
+    except Exception as e:
+        st.error(f"Detalhe do erro no Supabase: {e}")
+        st.stop()
 
-sessao = get_sessao()
 agora = int(time.time())
 segundos_restantes = sessao["segundos_restantes"]
 
