@@ -259,26 +259,27 @@ forma_pagto = st.radio(
 )
 
 if forma_pagto == "💠 Mercado Pago (Pix na hora, Crédito ou Débito)":
+ if forma_pagto == "💠 Mercado Pago (Pix na hora, Crédito ou Débito)":
     if st.button("Gerar Link de Pagamento (Pix / Cartão)"):
-sdk = mercadopago.SDK(st.secrets.get("MP_ACCESS_TOKEN"))
-item_mp = {
-"title": f"Consulta Marcelo Astrologo - {minutos_escolhidos} min",
-"quantity": 1,
-"currency_id": "BRL",
-"unit_price": float(valor_total)
-}
-preferencia = {
-"items": list((item_mp,)),
-"payment_methods": {"installments": 6}
-}
-res = sdk.preference().create(preferencia)
-resp_mp = res.get("response", {})
-if "init_point" in resp_mp:
-st.session_state.mp_pref_id = resp_mp.get("id")
-st.link_button("👉 Abrir Pagamento Seguro (Mercado Pago)", resp_mp.get("init_point"))
-st.caption("Após concluir o pagamento, clique no botão de confirmação abaixo para liberar sua sala.")
-else:
-st.error("Não foi possível gerar o link. Verifique suas credenciais do Mercado Pago.")
+        sdk = mercadopago.SDK(st.secrets.get("MP_ACCESS_TOKEN"))
+        item_mp = {
+            "title": f"Consulta Marcelo Astrologo - {minutos_escolhidos} min",
+            "quantity": 1,
+            "currency_id": "BRL",
+            "unit_price": float(valor_total)
+        }
+        preferencia = {
+            "items": list((item_mp,)),
+            "payment_methods": {"installments": 6}
+        }
+        res = sdk.preference().create(preferencia)
+        resp_mp = res.get("response", {})
+        if "init_point" in resp_mp:
+            st.session_state.mp_pref_id = resp_mp.get("id")
+            st.link_button("👉 Abrir Pagamento Seguro (Mercado Pago)", resp_mp.get("init_point"))
+            st.caption("Após concluir o pagamento, clique no botão de confirmação abaixo para liberar sua sala.")
+        else:
+            st.error("Não foi possível gerar o link. Verifique suas credenciais do Mercado Pago.")
 if "mp_pref_id" in st.session_state:
 if st.button("✅ Já realizei o pagamento (Liberar Sala)"):
 sdk = mercadopago.SDK(st.secrets.get("MP_ACCESS_TOKEN"))
