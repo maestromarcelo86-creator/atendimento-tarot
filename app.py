@@ -262,7 +262,6 @@ if forma_pagto == "💠 Mercado Pago (Pix na hora, Crédito ou Débito)":
             "items": list((item_mp,)),
             "payment_methods": {"installments": 6}
         }
-Use o código com cuidado.
 res = sdk.preference().create(preferencia)
 resp_mp = res.get("response", {})
 if "init_point" in resp_mp:
