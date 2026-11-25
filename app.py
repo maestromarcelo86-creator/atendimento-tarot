@@ -1,5 +1,6 @@
 import streamlit as st
 import time
+from datetime import date, timedelta
 import mercadopago
 import stripe
 from supabase import create_client
@@ -81,6 +82,17 @@ with st.sidebar:
         if st.button("🗑️ Limpar Histórico do Chat"):
             supabase.table("mensagens_tarot").delete().neq("id", 0).execute()
             st.rerun()
+
+        st.divider()
+        st.subheader("📅 Agenda de Clientes")
+        agenda = supabase.table("agendamentos_tarot").select("*").order("data_consulta").order("horario").execute().data
+        if not agenda:
+            st.caption("Nenhum horário agendado no momento.")
+        for ag in agenda:
+            st.info(f"**{ag.get('data_consulta')} às {ag.get('horario')}**\n\n👤 {ag.get('nome_cliente')} • 📱 {ag.get('whatsapp')}\n\n🔮 {ag.get('servico')}")
+            if st.button(f"❌ Cancelar #{ag.get('id')}", key=f"del_{ag.get('id')}"):
+                supabase.table("agendamentos_tarot").delete().eq("id", ag.get("id")).execute()
+                st.rerun()
 badge = '<span class="status-badge-on">🟢 DISPONÍVEL PARA CONSULTA AO VIVO</span>' if sessao.get("tarologo_online", True) else '<span class="status-badge-off">🔴 EM ATENDIMENTO / OFFLINE</span>'
 
 st.markdown(f"""
@@ -125,7 +137,51 @@ with e3:
     st.markdown('<div class="spec-card"><h4>🕊️ Consultoria Espiritual</h4><p style="font-size:14px;">Orientação espírita, limpeza energética e direcionamento.</p></div>', unsafe_allow_html=True)
 
 st.divider()
-st.subheader("⏱️ Escolha o Tempo da sua Consulta")
+st.subheader("📅 Agendar Dia e Horário Certo")
+st.caption("Prefere reservar um horário exclusivo? Escolha a data e a hora disponível abaixo:")
+
+col_d1, col_d2 = st.columns(2)
+with col_d1:
+    data_escolhida = st.date_input("Escolha o dia:", min_value=date.today(), max_value=date.today() + timedelta(days=60), format="DD/MM/YYYY")
+    data_str = data_escolhida.strftime("%d/%m/%Y")
+
+todos_horarios = ("09:00", "10:00", "11:00", "13:00", "14:00", "15:00", "16:00", "17:00", "18:00", "19:00", "20:00", "21:00")
+ocupados_res = supabase.table("agendamentos_tarot").select("horario").eq("data_consulta", data_str).execute().data
+horarios_ocupados = tuple(item.get("horario") for item in ocupados_res)
+horarios_livres = tuple(h for h in todos_horarios if h not in horarios_ocupados)
+
+with col_d2:
+    if horarios_livres:
+        horario_escolhido = st.selectbox("Horários disponíveis neste dia:", horarios_livres)
+    else:
+        horario_escolhido = None
+        st.warning("Todos os horários desta data já estão preenchidos. Escolha outro dia.")
+
+col_n1, col_n2 = st.columns(2)
+with col_n1:
+    nome_ag = st.text_input("Seu Nome Completo:", placeholder="Ex: Maria Silva")
+with col_n2:
+    whats_ag = st.text_input("Seu WhatsApp (com DDD):", placeholder="Ex: (11) 99999-9999")
+
+servico_ag = st.selectbox("Assunto da Consulta:", ("🃏 Tarot & Vidência", "🌌 Astrologia & Mapa Astral", "🕊️ Consultoria Espiritual"))
+
+if st.button("📅 Confirmar Agendamento"):
+    if not horarios_livres:
+        st.error("Selecione uma data com horários disponíveis.")
+    elif not nome_ag.strip() or not whats_ag.strip():
+        st.warning("Preencha seu nome e WhatsApp para confirmar o horário.")
+    else:
+        supabase.table("agendamentos_tarot").insert({
+            "data_consulta": data_str,
+            "horario": horario_escolhido,
+            "nome_cliente": nome_ag.strip(),
+            "whatsapp": whats_ag.strip(),
+            "servico": servico_ag
+        }).execute()
+        st.success(f"✅ Horário reservado com sucesso para **{data_str} às {horario_escolhido}** com Marcelo Astrologo! Garanta seus minutos abaixo.")
+
+st.divider()
+st.subheader("⏱️ Comprar Minutos de Consulta")
 c1, c2, c3 = st.columns(3)
 with c1:
     st.markdown(f'<div class="pkg-card"><h4>🌙 Objetiva</h4><h3>10 Minutos</h3><p>R$ {10*PRECO_MINUTO:.2f}</p></div>', unsafe_allow_html=True)
