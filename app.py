@@ -216,7 +216,7 @@ with c3:
 
 col_sel, col_val = st.columns(2)
 with col_sel:
-    minutos_escolhidos = st.selectbox("Selecione a duração desejada:",, index=1)
+     minutos_escolhidos = st.selectbox("Selecione a duração desejada:", (5, 10, 15, 20, 30, 45, 60), index=1)
 with col_val:
     valor_total = round(minutos_escolhidos * PRECO_MINUTO, 2)
     st.metric("Investimento Total", f"R$ {valor_total:.2f}")
