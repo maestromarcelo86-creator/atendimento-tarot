@@ -113,7 +113,7 @@ st.subheader("⏱️ Comprar Minutos de Consulta")
 
 col1, col2 = st.columns(2)
 with col1:
-    minutos_escolhidos = st.selectbox("Escolha os minutos:",, index=1)
+      minutos_escolhidos = st.selectbox("Escolha os minutos:", [5, 10, 15, 20, 30, 60], index=1)
 with col2:
     valor_total = round(minutos_escolhidos * PRECO_MINUTO, 2)
     st.metric("Valor Total", f"R$ {valor_total:.2f}")
