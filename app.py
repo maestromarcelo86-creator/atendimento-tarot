@@ -16,18 +16,20 @@ def init_supabase():
 
 supabase = init_supabase()
 
-# Busca estado atual da sala no banco de dados
+# Busca estado atual da sala no banco de dados com tratamento de erro
 def get_sessao():
     try:
         res = supabase.table("sessao_tarot").select("*").eq("id", 1).execute()
         if not res.data:
-            supabase.table("sessao_tarot").insert({"id": 1, "segundos_restantes": 0, "ultimo_tick": 0, "tarologo_online": True}).execute()
-            return {"id": 1, "segundos_restantes": 0, "ultimo_tick": 0, "tarologo_online": True}
+            dados_iniciais = {"id": 1, "segundos_restantes": 0, "ultimo_tick": 0, "tarologo_online": True}
+            supabase.table("sessao_tarot").insert(dados_iniciais).execute()
+            return dados_iniciais
         return res.data
     except Exception as e:
         st.error(f"Detalhe do erro no Supabase: {e}")
         st.stop()
 
+sessao = get_sessao()
 agora = int(time.time())
 segundos_restantes = sessao["segundos_restantes"]
 
@@ -111,7 +113,7 @@ st.subheader("⏱️ Comprar Minutos de Consulta")
 
 col1, col2 = st.columns(2)
 with col1:
-    minutos_escolhidos = st.selectbox("Escolha os minutos:", [5, 10, 15, 20, 30, 60], index=1)
+    minutos_escolhidos = st.selectbox("Escolha os minutos:",, index=1)
 with col2:
     valor_total = round(minutos_escolhidos * PRECO_MINUTO, 2)
     st.metric("Valor Total", f"R$ {valor_total:.2f}")
