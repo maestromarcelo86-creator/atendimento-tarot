@@ -15,6 +15,11 @@ st.set_page_config(
 
 PRECO_MINUTO = 3.99
 
+if "pagamento_confirmado" not in st.session_state:
+    st.session_state.pagamento_confirmado = False
+if "minutos_pagos" not in st.session_state:
+    st.session_state.minutos_pagos = 0
+
 st.markdown("""
 <style>
     .stApp { background: linear-gradient(180deg, #120924 0%, #1d1035 50%, #0e071c 100%); color: #f3e8ff; }
@@ -72,9 +77,13 @@ with st.sidebar:
             supabase.table("sessao_tarot").update({"tarologo_online": online}).eq("id", 1).execute()
             st.rerun()
         mins_manual = st.number_input("Adicionar minutos:", min_value=1, value=10)
-        if st.button("✅ Liberar / Somar Minutos"):
+        if st.button("✅ Liberar Sala Agora (Minutos)"):
             novo_saldo = segundos_restantes + (mins_manual * 60)
             supabase.table("sessao_tarot").update({"segundos_restantes": novo_saldo, "ultimo_tick": int(time.time())}).eq("id", 1).execute()
+            st.rerun()
+        if st.button("📅 Liberar Agendamento (Depósito)"):
+            st.session_state.pagamento_confirmado = True
+            st.session_state.minutos_pagos = mins_manual
             st.rerun()
         if st.button("⏹️ Encerrar Consulta"):
             supabase.table("sessao_tarot").update({"segundos_restantes": 0}).eq("id", 1).execute()
@@ -84,7 +93,7 @@ with st.sidebar:
             st.rerun()
 
         st.divider()
-        st.subheader("📅 Agenda de Clientes")
+        st.subheader("📅 Agenda de Clientes Pagos")
         agenda = supabase.table("agendamentos_tarot").select("*").order("data_consulta").order("horario").execute().data
         if not agenda:
             st.caption("Nenhum horário agendado no momento.")
@@ -137,51 +146,7 @@ with e3:
     st.markdown('<div class="spec-card"><h4>🕊️ Consultoria Espiritual</h4><p style="font-size:14px;">Orientação espírita, limpeza energética e direcionamento.</p></div>', unsafe_allow_html=True)
 
 st.divider()
-st.subheader("📅 Agendar Dia e Horário Certo")
-st.caption("Prefere reservar um horário exclusivo? Escolha a data e a hora disponível abaixo:")
-
-col_d1, col_d2 = st.columns(2)
-with col_d1:
-    data_escolhida = st.date_input("Escolha o dia:", min_value=date.today(), max_value=date.today() + timedelta(days=60), format="DD/MM/YYYY")
-    data_str = data_escolhida.strftime("%d/%m/%Y")
-
-todos_horarios = ("09:00", "10:00", "11:00", "13:00", "14:00", "15:00", "16:00", "17:00", "18:00", "19:00", "20:00", "21:00")
-ocupados_res = supabase.table("agendamentos_tarot").select("horario").eq("data_consulta", data_str).execute().data
-horarios_ocupados = tuple(item.get("horario") for item in ocupados_res)
-horarios_livres = tuple(h for h in todos_horarios if h not in horarios_ocupados)
-
-with col_d2:
-    if horarios_livres:
-        horario_escolhido = st.selectbox("Horários disponíveis neste dia:", horarios_livres)
-    else:
-        horario_escolhido = None
-        st.warning("Todos os horários desta data já estão preenchidos. Escolha outro dia.")
-
-col_n1, col_n2 = st.columns(2)
-with col_n1:
-    nome_ag = st.text_input("Seu Nome Completo:", placeholder="Ex: Maria Silva")
-with col_n2:
-    whats_ag = st.text_input("Seu WhatsApp (com DDD):", placeholder="Ex: (11) 99999-9999")
-
-servico_ag = st.selectbox("Assunto da Consulta:", ("🃏 Tarot & Vidência", "🌌 Astrologia & Mapa Astral", "🕊️ Consultoria Espiritual"))
-
-if st.button("📅 Confirmar Agendamento"):
-    if not horarios_livres:
-        st.error("Selecione uma data com horários disponíveis.")
-    elif not nome_ag.strip() or not whats_ag.strip():
-        st.warning("Preencha seu nome e WhatsApp para confirmar o horário.")
-    else:
-        supabase.table("agendamentos_tarot").insert({
-            "data_consulta": data_str,
-            "horario": horario_escolhido,
-            "nome_cliente": nome_ag.strip(),
-            "whatsapp": whats_ag.strip(),
-            "servico": servico_ag
-        }).execute()
-        st.success(f"✅ Horário reservado com sucesso para **{data_str} às {horario_escolhido}** com Marcelo Astrologo! Garanta seus minutos abaixo.")
-
-st.divider()
-st.subheader("⏱️ Comprar Minutos de Consulta")
+st.subheader("⏱️ 1º Passo: Adquirir Minutos de Consulta")
 c1, c2, c3 = st.columns(3)
 with c1:
     st.markdown(f'<div class="pkg-card"><h4>🌙 Objetiva</h4><h3>10 Minutos</h3><p>R$ {10*PRECO_MINUTO:.2f}</p></div>', unsafe_allow_html=True)
@@ -209,7 +174,7 @@ if forma_pagto == "💠 Mercado Pago (Pix, Crédito ou Débito)":
             st.session_state.mp_pref_id = resp_mp.get("id")
             st.link_button("👉 Abrir Pagamento Seguro (Mercado Pago)", resp_mp.get("init_point"))
     if "mp_pref_id" in st.session_state:
-        if st.button("✅ Já realizei o pagamento (Liberar Sala)"):
+        if st.button("✅ Já realizei o pagamento (Liberar Sala e Agenda)"):
             sdk = mercadopago.SDK(st.secrets.get("MP_ACCESS_TOKEN"))
             busca = sdk.payment().search({"sort": "date_created", "criteria": "desc", "limit": 5})
             aprovado = False
@@ -220,6 +185,8 @@ if forma_pagto == "💠 Mercado Pago (Pix, Crédito ou Débito)":
                         aprovado = True
                         break
             if aprovado:
+                st.session_state.pagamento_confirmado = True
+                st.session_state.minutos_pagos = minutos_escolhidos
                 novo_saldo = segundos_restantes + (minutos_escolhidos * 60)
                 supabase.table("sessao_tarot").update({"segundos_restantes": novo_saldo, "ultimo_tick": int(time.time())}).eq("id", 1).execute()
                 st.rerun()
@@ -234,10 +201,12 @@ elif forma_pagto == "💳 Stripe (Cartão de Crédito)":
         st.session_state.stripe_session_id = sessao_stripe.id
         st.link_button("👉 Pagar com Cartão no Stripe", sessao_stripe.url)
     if "stripe_session_id" in st.session_state:
-        if st.button("✅ Já paguei no Stripe (Liberar Sala)"):
+        if st.button("✅ Já paguei no Stripe (Liberar Sala e Agenda)"):
             stripe.api_key = st.secrets.get("STRIPE_SECRET_KEY")
             check = stripe.checkout.Session.retrieve(st.session_state.stripe_session_id)
             if check.payment_status == "paid":
+                st.session_state.pagamento_confirmado = True
+                st.session_state.minutos_pagos = minutos_escolhidos
                 novo_saldo = segundos_restantes + (minutos_escolhidos * 60)
                 supabase.table("sessao_tarot").update({"segundos_restantes": novo_saldo, "ultimo_tick": int(time.time())}).eq("id", 1).execute()
                 del st.session_state.stripe_session_id
@@ -249,11 +218,51 @@ elif forma_pagto == "🏦 Depósito / Transferência (Banco Safra)":
     st.info("**Dados Bancários (TED/DOC):**\n* **Banco:** Banco Safra (Código 422)\n* **Agência:** 0115\n* **Conta Corrente:** 342955-9\n* **Favorecido:** Marcelo Astrologo")
     comprovante = st.file_uploader("Anexe o comprovante (foto ou PDF):", type=list(("png", "jpg", "jpeg", "pdf")))
     if comprovante:
-        st.success("Comprovante enviado! Marcelo Astrologo irá validar e liberar seus minutos na sala.")
+        st.success("Comprovante enviado! Marcelo Astrologo irá validar para liberar sua sala e agenda.")
 
 st.divider()
-col_info1, col_info2 = st.columns(2)
-with col_info1:
-    st.markdown("**🔒 Sigilo Absoluto**\n\nTodas as consultas com Marcelo Astrologo são 100% confidenciais.")
-with col_info2:
-    st.markdown("**⏳ Tempo Transparente**\n\nO cronômetro inicia apenas após a confirmação do pagamento.")
+st.subheader("📅 2º Passo: Agendar Dia e Horário Certo")
+
+if st.session_state.pagamento_confirmado or eh_tarologo:
+    st.success(f"🔓 Pagamento confirmado ({st.session_state.minutos_pagos} min)! Escolha abaixo o dia e horário da sua consulta:")
+    col_d1, col_d2 = st.columns(2)
+    with col_d1:
+        data_escolhida = st.date_input("Escolha o dia:", min_value=date.today(), max_value=date.today() + timedelta(days=60), format="DD/MM/YYYY")
+        data_str = data_escolhida.strftime("%d/%m/%Y")
+
+    todos_horarios = ("09:00", "10:00", "11:00", "13:00", "14:00", "15:00", "16:00", "17:00", "18:00", "19:00", "20:00", "21:00")
+    ocupados_res = supabase.table("agendamentos_tarot").select("horario").eq("data_consulta", data_str).execute().data
+    horarios_ocupados = tuple(item.get("horario") for item in ocupados_res)
+    horarios_livres = tuple(h for h in todos_horarios if h not in horarios_ocupados)
+
+    with col_d2:
+        if horarios_livres:
+            horario_escolhido = st.selectbox("Horários disponíveis neste dia:", horarios_livres)
+        else:
+            horario_escolhido = None
+            st.warning("Todos os horários desta data já estão preenchidos. Escolha outro dia.")
+
+    col_n1, col_n2 = st.columns(2)
+    with col_n1:
+        nome_ag = st.text_input("Seu Nome Completo:", placeholder="Ex: Maria Silva")
+    with col_n2:
+        whats_ag = st.text_input("Seu WhatsApp (com DDD):", placeholder="Ex: (11) 99999-9999")
+
+    servico_ag = st.selectbox("Assunto da Consulta:", ("🃏 Tarot & Vidência", "🌌 Astrologia & Mapa Astral", "🕊️ Consultoria Espiritual"))
+
+    if st.button("📅 Confirmar Horário Pago"):
+        if not horarios_livres:
+            st.error("Selecione uma data com horários disponíveis.")
+        elif not nome_ag.strip() or not whats_ag.strip():
+            st.warning("Preencha seu nome e WhatsApp para confirmar o horário.")
+        else:
+            supabase.table("agendamentos_tarot").insert({
+                "data_consulta": data_str,
+                "horario": horario_escolhido,
+                "nome_cliente": nome_ag.strip(),
+                "whatsapp": whats_ag.strip(),
+                "servico": f"{servico_ag} ({st.session_state.minutos_pagos} min pagos)"
+            }).execute()
+            st.session_state.pagamento_confirmado = False
+            st.success(f"✅ Horário reservado e confirmado para **{data_str} às {horario_escolhido}** com Marcelo Astrologo!")
+else:
